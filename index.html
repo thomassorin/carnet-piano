@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carnet de piano</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f3f4f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#13161c" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Piano">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+@font-face{font-family:"Bodoni Moda";font-style:normal;font-weight:400 900;font-display:swap;src:url(fonts/bodoni-moda-latin-wght-normal.woff2) format("woff2")}
+@font-face{font-family:"Bodoni Moda";font-style:italic;font-weight:400 900;font-display:swap;src:url(fonts/bodoni-moda-latin-wght-italic.woff2) format("woff2")}
+@font-face{font-family:"Instrument Sans";font-style:normal;font-weight:400 700;font-display:swap;src:url(fonts/instrument-sans-latin-wght-normal.woff2) format("woff2")}
+/* Plan : un carnet gravé comme une partition. Papier froid, encre bleu-noir,
+   titres en didone (pages de titre des éditions), texte en grotesque discrète.
+   Chaque recueil garde sa couleur ; l'avancement d'un morceau se lit en lignes
+   de portée encrées (5 lignes = 5 étapes). Colonne unique au téléphone,
+   barre latérale à partir de 860px. */
+:root{
+  --paper:#f3f4f0; --card:#fbfbf9; --ink:#1a2130; --soft:#5d6675; --line:#d9dcd5; --faint:#e8eae4;
+  --accent:#b92f66; --on-accent:#fff;
+  --b-rose:#c2336b; --b-sapin:#2a7a66; --b-bleu:#3b5a9a; --b-ambre:#a86a12; --b-prune:#7a4a93;
+  --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --body:"Instrument Sans",-apple-system,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#13161c; --card:#1b1f27; --ink:#eceae4; --soft:#a0a7b4; --line:#2f3541; --faint:#232833;
+    --accent:#f0719f; --on-accent:#1a0a12;
+    --b-rose:#f0719f; --b-sapin:#5cc0a6; --b-bleu:#86a6ea; --b-ambre:#e0a548; --b-prune:#c093dc;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#13161c; --card:#1b1f27; --ink:#eceae4; --soft:#a0a7b4; --line:#2f3541; --faint:#232833;
+  --accent:#f0719f; --on-accent:#1a0a12;
+  --b-rose:#f0719f; --b-sapin:#5cc0a6; --b-bleu:#86a6ea; --b-ambre:#e0a548; --b-prune:#c093dc;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums}
+
+.app{display:flex;flex-direction:column;min-height:100vh}
+main{flex:1;padding:calc(20px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));max-width:860px;width:100%;margin:0 auto}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(10px + env(safe-area-inset-bottom))}
+.brand,.sync{display:none}
+.nav a{flex:1;text-align:center;text-decoration:none;color:var(--soft);font-size:11.5px;font-weight:500;padding:10px 1px;border-radius:8px;white-space:nowrap}
+.nav a[aria-current="page"]{color:var(--ink);font-weight:600;box-shadow:inset 0 2px 0 var(--accent)}
+@media (min-width:860px){
+  .app{flex-direction:row}
+  .nav{position:sticky;top:0;bottom:auto;height:100vh;width:220px;flex:none;flex-direction:column;gap:4px;border-top:0;border-right:1px solid var(--line);padding:28px 16px}
+  .nav a{flex:none;text-align:left;font-size:15px;padding:9px 12px}
+  .nav a[aria-current="page"]{box-shadow:inset 3px 0 0 var(--accent);background:var(--faint)}
+  .brand{display:block;font-family:var(--display);font-style:italic;font-size:24px;line-height:1.05;margin:0 12px 22px}
+  .sync{display:block;margin-top:auto;padding:0 12px;font-size:12px;color:var(--soft)}
+  main{padding:36px 40px 60px;margin:0}
+}
+
+.eyebrow{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);margin:0 0 4px}
+.title{font-size:clamp(34px,7vw,50px);line-height:1}
+.title em{font-weight:500}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.banner{font-size:13.5px;color:var(--soft);border-left:3px solid var(--accent);padding:6px 10px;margin:0 0 16px;background:var(--card)}
+section{margin-top:28px}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
+.sec-h h2{font-size:22px}
+.sec-h span{font-size:13px;color:var(--soft)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+.muted{color:var(--soft)}
+.small{font-size:13.5px}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:9px 14px;font-weight:500;font-size:14.5px}
+.btn:hover{border-color:var(--soft)}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.btn.accent{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.btn.quiet{border-color:transparent;background:transparent;color:var(--soft);padding:9px 8px}
+.btn.danger{color:var(--accent)}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* chiffres clés */
+.stats{display:grid;grid-template-columns:auto auto 1fr;gap:20px;align-items:end}
+.stat b{display:block;font-family:var(--display);font-size:38px;line-height:1;font-weight:700}
+.stat span{font-size:12.5px;color:var(--soft)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:64px;min-width:150px;max-width:300px;justify-self:end;width:100%}
+.week div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px;font-size:11px;color:var(--soft)}
+.week i{display:block;width:100%;border-radius:3px 3px 0 0;background:var(--ink);min-height:2px;opacity:.85}
+.week .zero i{background:var(--line)}
+.week .today{color:var(--ink);font-weight:600}
+.week .today i{background:var(--accent);opacity:1}
+@media (max-width:480px){.stats{grid-template-columns:1fr 1fr}.week{grid-column:1/-1;justify-self:stretch;max-width:none}}
+
+/* séance */
+.clock{font-family:var(--display);font-size:clamp(56px,16vw,84px);line-height:1;font-weight:500;letter-spacing:-.02em}
+.session{display:grid;gap:14px}
+.session-top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 12px;font-size:13.5px;max-width:100%;text-align:left}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--c)}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--soft)}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--ink);font-size:16px}
+textarea{min-height:70px;resize:vertical}
+.inline{display:flex;gap:10px;flex-wrap:wrap}
+.inline>*{flex:1;min-width:120px}
+
+/* morceaux */
+.list{display:grid;border:1px solid var(--line);border-radius:10px;background:var(--card);overflow:hidden}
+.piece{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:0;border-top:1px solid var(--faint);background:transparent;text-align:left;width:100%}
+.piece:first-child{border-top:0}
+.piece:hover{background:var(--faint)}
+.piece .t{font-weight:500;overflow-wrap:anywhere}
+.piece .s{font-size:12.5px;color:var(--soft)}
+.piece .r{text-align:right;font-size:12.5px;color:var(--soft);white-space:nowrap}
+.piece .r b{display:block;color:var(--ink);font-weight:500;font-size:13px}
+.staff{width:30px;height:22px;flex:none}
+.staff line{stroke:var(--line);stroke-width:1.2}
+.staff line.on{stroke:var(--c);stroke-width:2.1}
+.withnext{display:grid;grid-template-columns:1fr auto;align-items:center;border-top:1px solid var(--faint)}
+.withnext:first-child{border-top:0}
+.withnext .piece{border-top:0}
+.withnext .btn{margin-right:10px;font-size:13px;padding:7px 10px}
+
+.book{margin-top:26px}
+.book-h{display:grid;gap:8px;border-left:4px solid var(--c);padding-left:12px;margin-bottom:10px}
+.book-h h2{font-size:26px;line-height:1.05}
+.book-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--soft);align-items:center}
+.bar{height:6px;background:var(--faint);border-radius:3px;overflow:hidden;display:flex}
+.bar i{background:var(--c)}
+.bar i+i{opacity:.35}
+.empty{padding:18px;text-align:center;color:var(--soft);font-size:14.5px}
+
+/* journal */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;max-width:520px}
+.heat i{aspect-ratio:1;border-radius:2px;background:var(--faint)}
+.heat .l1{background:color-mix(in srgb,var(--accent) 28%,var(--faint))}
+.heat .l2{background:color-mix(in srgb,var(--accent) 52%,var(--faint))}
+.heat .l3{background:color-mix(in srgb,var(--accent) 78%,var(--faint))}
+.heat .l4{background:var(--accent)}
+.heat .fut{background:transparent}
+.legend{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--soft);margin-top:8px}
+.legend i{width:11px;height:11px;border-radius:2px;display:inline-block}
+.sess{display:grid;grid-template-columns:74px 1fr auto;gap:10px;padding:11px 12px;border:0;border-top:1px solid var(--faint);background:transparent;text-align:left;width:100%;align-items:start}
+.sess:first-child{border-top:0}
+.sess:hover{background:var(--faint)}
+.sess .d{font-size:13px;color:var(--soft)}
+.sess .m{font-family:var(--display);font-size:20px;font-weight:700;white-space:nowrap}
+.month{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);margin:18px 0 6px}
+
+/* métronome */
+.metro{display:grid;gap:18px;justify-items:center;text-align:center;padding:26px 16px}
+.bpm{font-family:var(--display);font-size:clamp(84px,24vw,132px);line-height:.9;font-weight:700}
+.tempo-name{font-family:var(--display);font-style:italic;font-size:24px}
+.beats{display:flex;gap:10px}
+.beats i{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--soft)}
+.beats i.hit{background:var(--ink);border-color:var(--ink)}
+.beats i.first.hit{background:var(--accent);border-color:var(--accent)}
+input[type=range]{width:min(420px,100%);accent-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:8px 12px;font-size:13.5px;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+/* fenêtre d'édition */
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:0;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 32px)}
+dialog::backdrop{background:rgba(10,14,22,.5)}
+dialog form{display:grid;gap:14px;padding:20px}
+dialog h2{font-size:26px}
+.stages{display:grid;gap:4px}
+.stages button{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 8px;font-size:14.5px}
+.stages button[aria-pressed="true"]{border-color:var(--ink);background:var(--paper);font-weight:600}
+.swatches{display:flex;gap:8px}
+.swatches button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;background:var(--c)}
+.swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--ink)}
+.dlg-foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px}
+.spark{width:100%;height:60px}
+
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+.steps{margin:0;padding-left:20px;display:grid;gap:10px}
+.steps li::marker{font-family:var(--display);font-weight:700}
+.state{display:flex;gap:10px;align-items:center;font-weight:500}
+.state i{width:10px;height:10px;border-radius:50%;background:var(--soft);flex:none}
+.state.ok i{background:var(--b-sapin)}
+.state.bad i{background:var(--accent)}
+a{color:inherit}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav" id="nav" aria-label="Sections">
+    <p class="brand">Carnet<br>de piano</p>
+    <a href="#aujourdhui" data-v="aujourdhui">Aujourd'hui</a>
+    <a href="#repertoire" data-v="repertoire">Répertoire</a>
+    <a href="#journal" data-v="journal">Journal</a>
+    <a href="#metronome" data-v="metronome">Métronome</a>
+    <a href="#reglages" data-v="reglages">Réglages</a>
+    <p class="sync" id="sync"></p>
+  </nav>
+  <main id="view"></main>
+</div>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+
+<script>
+"use strict";
+const STAGES=["Pas commencé","Déchiffrage","Mains séparées","Mains ensemble","Au tempo","Acquis"];
+const COLORS=["rose","sapin","bleu","ambre","prune"];
+const COLLS=["books","pieces","sessions"];
+const LS="carnet-piano-v1";
+const S={books:{},pieces:{},sessions:{},dead:{},loaded:false,filter:"tous"};
+const D={running:false,start:0,acc:0,minutes:"",note:"",sel:new Set()};   // séance en cours
+const M={bpm:72,beats:4,on:false,ctx:null,next:0,beat:0,timer:null,taps:[]};
+let DS=null;                                                              // état de la fenêtre d'édition
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ymd=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const today=()=>ymd(new Date());
+const parse=s=>{const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const daysSince=s=>Math.round((parse(today())-parse(s))/864e5);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const col=b=>`var(--b-${COLORS.includes(b?.color)?b.color:"bleu"})`;
+const fmtMin=m=>m>=60?Math.floor(m/60)+" h "+String(m%60).padStart(2,"0"):m+" min";
+const numOrNull=v=>{const n=parseInt(v,10);return Number.isFinite(n)&&n>0?n:null};
+
+/* ---------- contenu de départ : les trois recueils ---------- */
+const MK=["Six mélodies à l'unisson, n° 1","Six mélodies à l'unisson, n° 2","Six mélodies à l'unisson, n° 3","Six mélodies à l'unisson, n° 4","Six mélodies à l'unisson, n° 5","Six mélodies à l'unisson, n° 6","Notes pointées","Répétition (1)","Syncopes (1)","Avec les mains alternées","Mouvement parallèle","Réflexion (en miroir)","Changement de position","Question et réponse","Chanson villageoise","Mouvement parallèle avec changement de position","Mouvement contraire (1)","Quatre mélodies à l'unisson, n° 1","Quatre mélodies à l'unisson, n° 2","Quatre mélodies à l'unisson, n° 3","Quatre mélodies à l'unisson, n° 4","Imitation et contrepoint","Imitation et inversion (1)","Pastorale","Imitation et inversion (2)","Répétition (2)","Syncopes (2)","Canon à l'octave","Imitation en miroir","Canon à la quinte inférieure","Danse en forme de canon","En mode dorien","Danse lente","En mode phrygien","Choral","Canon libre"];
+const CPE="Attribué à Carl Philipp Emanuel Bach.";
+const AM=[[113,"Menuet en fa majeur"],[114,"Menuet en sol majeur","Attribué à Christian Petzold. Va de pair avec le menuet en sol mineur, BWV Anh. 115."],[115,"Menuet en sol mineur","Attribué à Christian Petzold."],[116,"Menuet en sol majeur"],[117,"Polonaise en fa majeur"],[118,"Menuet en si bémol majeur"],[119,"Polonaise en sol mineur"],[120,"Menuet en la mineur"],[121,"Menuet en do mineur"],[122,"Marche en ré majeur",CPE],[123,"Polonaise en sol mineur",CPE],[124,"Marche en sol majeur",CPE],[125,"Polonaise en sol mineur",CPE],[126,"Musette en ré majeur"],[127,"Marche en mi bémol majeur"],[128,"Polonaise en ré mineur"],[129,"Solo per il cembalo en mi bémol majeur",CPE],[130,"Polonaise en sol majeur"],[131,"Marche en fa majeur"],[132,"Menuet en ré mineur"]];
+function seed(){
+  const o={books:{},pieces:{},sessions:{}};
+  o.books.rose={id:"rose",u:1,title:"Méthode Rose",author:"Ernest Van de Velde · 1re année",pages:60,page:0,color:"rose",order:1};
+  o.books.bartok={id:"bartok",u:1,title:"Mikrokosmos, volume 1",author:"Béla Bartók",pages:null,page:0,color:"sapin",order:2};
+  o.books.bach={id:"bach",u:1,title:"Petit livre d'Anna Magdalena Bach",author:"Johann Sebastian Bach et son entourage · 1725",pages:null,page:0,color:"bleu",order:3};
+  MK.forEach((t,i)=>{const id="mk-"+String(i+1).padStart(2,"0");o.pieces[id]={id,u:1,bookId:"bartok",n:i+1,title:t,ref:"n° "+(i+1),stage:0}});
+  AM.forEach(([k,t,note],i)=>{const id="am-"+k;o.pieces[id]={id,u:1,bookId:"bach",n:i+1,title:t,ref:"BWV Anh. "+k,stage:0,notes:note||""}});
+  o.pieces["am-846"]={id:"am-846",u:1,bookId:"bach",n:21,title:"Prélude en do majeur",ref:"BWV 846",stage:0,notes:"Premier prélude du Clavier bien tempéré, recopié dans le carnet."};
+  return o;
+}
+
+/* ---------- stockage : cet appareil, puis synchronisation par un fichier privé sur GitHub ---------- */
+const FILE="carnet-piano.json";
+const SYNC={cfg:null,state:"off",last:0,busy:false,again:false,timer:0};
+const snapshot=()=>({v:1,books:S.books,pieces:S.pieces,sessions:S.sessions,dead:S.dead});
+const norm=r=>({v:1,books:r.books||{},pieces:r.pieces||{},sessions:r.sessions||{},dead:r.dead||{}});
+function stable(v){
+  if(Array.isArray(v))return "["+v.map(stable).join(",")+"]";
+  if(v&&typeof v==="object")return "{"+Object.keys(v).sort().map(k=>JSON.stringify(k)+":"+stable(v[k])).join(",")+"}";
+  return JSON.stringify(v===undefined?null:v);
+}
+const Store={
+  init(){
+    let had=false;
+    try{const o=JSON.parse(localStorage.getItem(LS)||"null");if(o){had=true;for(const c of COLLS)S[c]=o[c]||{};S.dead=o.dead||{}}}catch(e){}
+    if(!had){Object.assign(S,seed());this.save()}
+    try{SYNC.cfg=JSON.parse(localStorage.getItem(LS+"-sync")||"null")}catch(e){}
+    S.loaded=true;
+    if(SYNC.cfg&&SYNC.cfg.gistId){SYNC.state="ok";sync()}else SYNC.cfg=null;
+  },
+  save(){try{localStorage.setItem(LS,JSON.stringify(snapshot()))}catch(e){toast("Stockage indisponible ou plein sur cet appareil.")}},
+  put(c,id,data){
+    const body=JSON.parse(JSON.stringify(data));body.id=id;body.u=Date.now();
+    S[c]=Object.assign({},S[c],{[id]:body});delete S.dead[c+"/"+id];
+    this.save();queueSync();scheduleRender(true);
+  },
+  del(c,id){
+    const o=Object.assign({},S[c]);delete o[id];S[c]=o;S.dead[c+"/"+id]=Date.now();
+    this.save();queueSync();scheduleRender(true);
+  }
+};
+/* Fusion : pour chaque fiche, la version la plus récente gagne ; une suppression l'emporte sur une fiche plus ancienne. */
+function merge(remote){
+  const r=norm(remote);let changed=false;
+  for(const k in r.dead)if((S.dead[k]||0)<r.dead[k])S.dead[k]=r.dead[k];
+  for(const c of COLLS){
+    const o=Object.assign({},S[c]);
+    for(const id in r[c]){const x=r[c][id],l=o[id];if((S.dead[c+"/"+id]||0)>=(x.u||0))continue;if(!l||(x.u||0)>(l.u||0)){o[id]=x;changed=true}}
+    for(const id in o)if((S.dead[c+"/"+id]||0)>=(o[id].u||0)){delete o[id];changed=true}
+    S[c]=o;
+  }
+  return changed;
+}
+function gh(path,opt={}){
+  return fetch("https://api.github.com"+path,Object.assign({cache:"no-store"},opt,{headers:Object.assign({"Accept":"application/vnd.github+json","Authorization":"Bearer "+SYNC.cfg.token},opt.headers||{})}));
+}
+function setSync(st){SYNC.state=st;const e=$("#sync");if(e)e.textContent=syncLabel();if(route()==="reglages"||st==="auth"||st==="missing")scheduleRender()}
+function syncLabel(){
+  const t=SYNC.last?new Date(SYNC.last).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}):"";
+  return {off:"Synchronisation non configurée",syncing:"Synchronisation…",ok:t?"Synchronisé à "+t:"Synchronisation active",offline:"Hors ligne : synchronisation au retour du réseau",
+    auth:"Clé GitHub refusée ou expirée",missing:"Fichier de données introuvable",error:"Synchronisation impossible pour l'instant, nouvel essai automatique"}[SYNC.state];
+}
+function queueSync(){if(!SYNC.cfg)return;clearTimeout(SYNC.timer);SYNC.timer=setTimeout(sync,2000)}
+async function sync(){
+  if(!SYNC.cfg||!SYNC.cfg.gistId)return;
+  if(SYNC.busy){SYNC.again=true;return}
+  if(navigator.onLine===false){setSync("offline");return}
+  SYNC.busy=true;setSync("syncing");
+  try{
+    const r=await gh("/gists/"+SYNC.cfg.gistId);
+    if(r.status===401){setSync("auth");return}
+    if(r.status===404){setSync("missing");return}
+    if(!r.ok)throw new Error("lecture");
+    const g=await r.json(),f=g.files&&g.files[FILE];
+    let txt=f?f.content:"";
+    if(f&&f.truncated)txt=await (await fetch(f.raw_url,{cache:"no-store"})).text();
+    let remote={};try{remote=JSON.parse(txt||"{}")}catch(e){}
+    if(merge(remote)){Store.save();scheduleRender()}
+    const mine=stable(snapshot());
+    if(mine!==stable(norm(remote))){
+      const w=await gh("/gists/"+SYNC.cfg.gistId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({files:{[FILE]:{content:mine}}})});
+      if(w.status===401){setSync("auth");return}
+      if(!w.ok)throw new Error("écriture");
+    }
+    SYNC.last=Date.now();setSync("ok");
+  }catch(e){setSync(navigator.onLine===false?"offline":"error")}
+  finally{SYNC.busy=false;if(SYNC.again){SYNC.again=false;queueSync()}}
+}
+async function connect(token){
+  SYNC.cfg={token,gistId:""};setSync("syncing");
+  const fail=m=>{SYNC.cfg=null;setSync("off");toast(m)};
+  try{
+    const u=await gh("/gists?per_page=100");
+    if(u.status===401)return fail("GitHub refuse cette clé. Recopiez-la en entier.");
+    if(!u.ok)throw new Error("liste");
+    let g=(await u.json()).find(x=>x.files&&x.files[FILE]);
+    if(!g){
+      const c=await gh("/gists",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({description:"Carnet de piano (données)",public:false,files:{[FILE]:{content:stable(snapshot())}}})});
+      if(c.status===403||c.status===404)return fail("Cette clé n'a pas le droit « gist ». Recréez-la avec le lien de l'étape 1.");
+      if(!c.ok)throw new Error("création");
+      g=await c.json();
+    }
+    SYNC.cfg.gistId=g.id;
+    try{localStorage.setItem(LS+"-sync",JSON.stringify(SYNC.cfg))}catch(e){}
+    await sync();
+    if(SYNC.state==="ok")toast("Synchronisation activée sur cet appareil");
+  }catch(e){fail("Connexion à GitHub impossible. Vérifiez le réseau puis réessayez.")}
+}
+function disconnect(){SYNC.cfg=null;try{localStorage.removeItem(LS+"-sync")}catch(e){}setSync("off");toast("Cet appareil n'est plus synchronisé. Ses données restent sur place.")}
+function exportData(){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(snapshot(),null,1)],{type:"application/json"}));
+  a.download="carnet-piano-"+today()+".json";document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function importData(file){
+  const fr=new FileReader();
+  fr.onload=()=>{try{const o=JSON.parse(fr.result);if(!o||typeof o!=="object"||!o.pieces)throw 0;merge(o);Store.save();queueSync();scheduleRender(true);toast("Sauvegarde fusionnée avec le carnet")}catch(e){toast("Ce fichier n'est pas une sauvegarde du carnet.")}};
+  fr.readAsText(file);
+}
+
+/* ---------- calculs ---------- */
+const booksArr=()=>Object.values(S.books).sort((a,b)=>(a.order??99)-(b.order??99)||a.title.localeCompare(b.title));
+const piecesOf=id=>Object.values(S.pieces).filter(p=>p.bookId===id).sort((a,b)=>(a.n??999)-(b.n??999)||a.title.localeCompare(b.title));
+const sessArr=()=>Object.values(S.sessions).sort((a,b)=>b.date.localeCompare(a.date)||(b.ts||0)-(a.ts||0));
+function byDay(){const m={};for(const s of Object.values(S.sessions))m[s.date]=(m[s.date]||0)+(s.minutes||0);return m}
+function streak(m){let d=new Date(),n=0;if(!m[ymd(d)])d=addDays(d,-1);while(m[ymd(d)]){n++;d=addDays(d,-1)}return n}
+function monday(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function tempoName(b){return b<60?"Largo":b<66?"Larghetto":b<76?"Adagio":b<108?"Andante":b<120?"Moderato":b<168?"Allegro":b<200?"Presto":"Prestissimo"}
+
+/* ---------- éléments ---------- */
+function staff(st,c){
+  let s=`<svg class="staff" viewBox="0 0 30 22" style="--c:${c}" role="img" aria-label="${esc(STAGES[st])}">`;
+  for(let i=0;i<5;i++){const y=19-i*4;s+=`<line x1="1" x2="29" y1="${y}" y2="${y}"${i<st?' class="on"':""}/>`}
+  if(st>=5)s+=`<ellipse cx="15" cy="11" rx="4.4" ry="3.1" transform="rotate(-20 15 11)" fill="${c}"/>`;
+  return s+"</svg>";
+}
+function pieceRow(p,opt={}){
+  const b=S.books[p.bookId],st=p.stage||0;
+  const tp=(p.tempo||p.goal)?`♩ ${p.tempo||"–"}${p.goal?" / "+p.goal:""}`:"";
+  const sub=[opt.compact?STAGES[st]:"",opt.compact?tp:"",opt.book&&b?b.title:"",p.ref].filter(Boolean).join(" · ");
+  let r=opt.compact?"":`<b>${esc(STAGES[st])}</b>`;
+  if(opt.compact)return `<button class="piece" style="grid-template-columns:34px 1fr" data-act="piece" data-id="${esc(p.id)}">${staff(st,col(b))}
+    <span><span class="t">${esc(p.title)}</span><br><span class="s num">${esc(sub)}</span></span></button>`;
+  if(p.tempo||p.goal)r+=`<span class="num">♩ ${p.tempo||"–"}${p.goal?" / "+p.goal:""}</span>`;
+  else if(opt.last&&p.lastPlayed)r+=`<span>joué il y a ${daysSince(p.lastPlayed)} j</span>`;
+  return `<button class="piece" data-act="piece" data-id="${esc(p.id)}">${staff(st,col(b))}
+    <span><span class="t">${esc(p.title)}</span>${sub?`<br><span class="s">${esc(sub)}</span>`:""}</span>
+    <span class="r">${r}</span></button>`;
+}
+
+/* ---------- vues ---------- */
+function viewToday(){
+  const m=byDay(),t=new Date(),mon=monday(t);
+  let wk=0,max=30,days=[];
+  for(let i=0;i<7;i++){const k=ymd(addDays(mon,i)),v=m[k]||0;wk+=v;max=Math.max(max,v);days.push([k,v])}
+  const L=["L","M","M","J","V","S","D"];
+  const bars=days.map(([k,v],i)=>`<div class="${v?"":"zero"}${k===today()?" today":""}" title="${v} min"><i style="height:${Math.round(v/max*100)}%"></i>${L[i]}</div>`).join("");
+  const all=Object.values(S.pieces);
+  const cur=all.filter(p=>p.stage>=1&&p.stage<=4).sort((a,b)=>(b.lastPlayed||"").localeCompare(a.lastPlayed||""));
+  const rev=all.filter(p=>p.stage===5&&(!p.lastPlayed||daysSince(p.lastPlayed)>=14)).sort((a,b)=>(a.lastPlayed||"").localeCompare(b.lastPlayed||"")).slice(0,5);
+  const chipIds=[...new Set([...cur.map(p=>p.id),...rev.map(p=>p.id),...D.sel])];
+  const chips=chipIds.map(id=>S.pieces[id]).filter(Boolean).map(p=>`<button class="chip" data-act="sel" data-id="${esc(p.id)}" aria-pressed="${D.sel.has(p.id)}"><span class="dot" style="--c:${col(S.books[p.bookId])}"></span>${esc(p.title)}</button>`).join("");
+  const others=all.filter(p=>!chipIds.includes(p.id));
+  const date=t.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  return `<div class="head"><div><p class="eyebrow">${esc(date)}</p><h1 class="title">Carnet <em>de piano</em></h1></div></div>
+  ${banner()}
+  <div class="stats">
+    <div class="stat"><b class="num">${streak(m)}</b><span>jour${streak(m)>1?"s":""} de suite</span></div>
+    <div class="stat"><b class="num">${fmtMin(wk)}</b><span>cette semaine</span></div>
+    <div class="week" aria-label="Minutes par jour cette semaine">${bars}</div>
+  </div>
+  <section><div class="sec-h"><h2>Séance</h2><span>Chronométrez, ou saisissez la durée après coup</span></div>
+    <div class="card session">
+      <div class="session-top"><div class="clock num" id="clock">${clockText()}</div>
+        <div class="row-btns"><button class="btn ${D.running?"":"accent"}" data-act="timer">${D.running?"Pause":(elapsed()?"Reprendre":"Démarrer")}</button>
+        ${elapsed()?`<button class="btn quiet" data-act="timer-reset">Remettre à zéro</button>`:""}</div></div>
+      <div><p class="small muted" style="margin:0 0 6px">Morceaux travaillés</p>
+        <div class="chips">${chips||`<span class="small muted">Aucun morceau en cours. Choisissez-en un ci-dessous ou dans le répertoire.</span>`}</div>
+        ${others.length?`<select id="s-add" aria-label="Ajouter un autre morceau" style="margin-top:8px"><option value="">Ajouter un autre morceau…</option>${booksArr().map(b=>{const o=others.filter(p=>p.bookId===b.id).sort((x,y)=>(x.n??999)-(y.n??999));return o.length?`<optgroup label="${esc(b.title)}">${o.map(p=>`<option value="${esc(p.id)}">${esc(p.title)}</option>`).join("")}</optgroup>`:""}).join("")}</select>`:""}
+      </div>
+      <div class="inline">
+        <label class="f" style="flex:0 0 130px">Durée (min)<input type="number" id="s-min" min="1" max="600" inputmode="numeric" placeholder="chrono" value="${esc(D.minutes)}"></label>
+        <label class="f">Note de séance<input type="text" id="s-note" placeholder="Ce qui a marché, ce qui résiste" value="${esc(D.note)}"></label>
+      </div>
+      <div><button class="btn primary" data-act="save-session">Enregistrer la séance</button></div>
+    </div>
+  </section>
+  <section><div class="sec-h"><h2>En cours</h2><span>${cur.length} morceau${cur.length>1?"x":""}</span></div>
+    <div class="list">${cur.length?cur.map(p=>`<div class="withnext">${pieceRow(p,{book:1,compact:1})}<button class="btn" data-act="advance" data-id="${esc(p.id)}" title="Passer à : ${esc(STAGES[p.stage+1])}">Étape suivante</button></div>`).join(""):`<p class="empty">Rien en cours. Ouvrez le répertoire et passez un morceau en « Déchiffrage ».</p>`}</div>
+  </section>
+  ${rev.length?`<section><div class="sec-h"><h2>À rejouer</h2><span>Acquis, pas joués depuis 14 jours</span></div><div class="list">${rev.map(p=>pieceRow(p,{book:1,last:1})).join("")}</div></section>`:""}`;
+}
+
+function viewRep(){
+  const F=[["tous","Tous"],["cours","En cours"],["acquis","Acquis"],["afaire","Pas commencés"]];
+  const keep=p=>S.filter==="tous"||(S.filter==="cours"&&p.stage>=1&&p.stage<=4)||(S.filter==="acquis"&&p.stage===5)||(S.filter==="afaire"&&!p.stage);
+  const bs=booksArr();
+  const tot=Object.values(S.pieces),acq=tot.filter(p=>p.stage===5).length;
+  return `<div class="head"><div><p class="eyebrow">${acq} acquis sur ${tot.length} morceaux</p><h1 class="title">Répertoire</h1></div>
+    <button class="btn" data-act="book" data-id="">Ajouter un recueil</button></div>
+  ${banner()}
+  <div class="seg" role="group" aria-label="Filtrer">${F.map(([k,l])=>`<button data-act="filter" data-id="${k}" aria-pressed="${S.filter===k}">${l}</button>`).join("")}</div>
+  ${bs.length?bs.map(b=>{
+    const ps=piecesOf(b.id),a=ps.filter(p=>p.stage===5).length,c=ps.filter(p=>p.stage>=1&&p.stage<=4).length,shown=ps.filter(keep);
+    const pg=b.pages?`page ${b.page||0} sur ${b.pages}`:"";
+    const pa=ps.length?a/ps.length*100:(b.pages?(b.page||0)/b.pages*100:0),pc=ps.length?c/ps.length*100:0;
+    return `<div class="book" style="--c:${col(b)}"><div class="book-h">
+      <div><h2>${esc(b.title)}</h2><span class="small muted">${esc(b.author||"")}</span></div>
+      <div class="bar" aria-hidden="true"><i style="width:${pa}%"></i><i style="width:${pc}%"></i></div>
+      <div class="book-meta"><span class="num">${ps.length?`${a} acquis · ${c} en cours · ${ps.length} au total`:"Aucun morceau saisi"}${pg?" · "+pg:""}</span>
+        <span class="row-btns"><button class="btn" data-act="piece-new" data-id="${esc(b.id)}">Ajouter un morceau</button><button class="btn quiet" data-act="book" data-id="${esc(b.id)}">Modifier le recueil</button></span></div></div>
+      <div class="list">${shown.length?shown.map(p=>pieceRow(p)).join(""):`<p class="empty">${ps.length?"Aucun morceau pour ce filtre.":"Ajoutez les leçons et morceaux au fil des pages, et notez la page atteinte dans « Modifier le recueil »."}</p>`}</div></div>`;
+  }).join(""):`<p class="card empty" style="margin-top:20px">Le carnet est vide. Ajoutez votre premier recueil.</p>`}`;
+}
+
+function viewJournal(){
+  const m=byDay(),ss=sessArr(),total=ss.reduce((a,s)=>a+(s.minutes||0),0);
+  const W=18,start=addDays(monday(new Date()),-(W-1)*7),td=today();
+  let cells="";
+  for(let i=0;i<W*7;i++){const k=ymd(addDays(start,i)),v=m[k]||0;
+    cells+=k>td?`<i class="fut"></i>`:`<i class="${v?(v<15?"l1":v<30?"l2":v<60?"l3":"l4"):""}" title="${parse(k).toLocaleDateString("fr-FR",{day:"numeric",month:"short"})} : ${v} min"></i>`}
+  let list="",mo="";
+  for(const s of ss){
+    const d=parse(s.date),k=d.toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+    if(k!==mo){if(mo)list+="</div>";list+=`<p class="month">${esc(k)}</p><div class="list">`;mo=k}
+    const names=(s.pieces||[]).map(id=>S.pieces[id]?.title).filter(Boolean).join(", ");
+    list+=`<button class="sess" data-act="session" data-id="${esc(s.id)}"><span class="d">${esc(d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric"}))}</span>
+      <span><span class="t">${esc(names||"Travail libre")}</span>${s.note?`<br><span class="small muted">${esc(s.note)}</span>`:""}</span><span class="m num">${s.minutes} min</span></button>`;
+  }
+  if(mo)list+="</div>";
+  return `<div class="head"><div><p class="eyebrow">${ss.length} séance${ss.length>1?"s":""} · ${fmtMin(total)} au piano</p><h1 class="title">Journal</h1></div>
+    <button class="btn" data-act="session" data-id="">Ajouter une séance passée</button></div>
+  ${banner()}
+  <div class="card"><div class="heat" style="grid-template-columns:repeat(${W},1fr)" aria-label="Minutes par jour sur ${W} semaines">${cells}</div>
+    <div class="legend">moins <i style="background:var(--faint)"></i><i style="background:color-mix(in srgb,var(--accent) 28%,var(--faint))"></i><i style="background:color-mix(in srgb,var(--accent) 52%,var(--faint))"></i><i style="background:color-mix(in srgb,var(--accent) 78%,var(--faint))"></i><i style="background:var(--accent)"></i> plus (1 h et au-delà)</div></div>
+  ${list||`<p class="card empty" style="margin-top:20px">Aucune séance pour l'instant. Lancez le chronomètre depuis « Aujourd'hui ».</p>`}`;
+}
+
+function viewMetro(){
+  const B=[2,3,4,6];
+  return `<div class="head"><div><p class="eyebrow">Battue ${M.beats} temps</p><h1 class="title">Métronome</h1></div></div>
+  <div class="card metro">
+    <div><div class="bpm num" id="m-bpm">${M.bpm}</div><div class="tempo-name" id="m-name">${tempoName(M.bpm)}</div></div>
+    <div class="beats" id="m-beats">${Array.from({length:M.beats},(_,i)=>`<i class="${i?"":"first"}"></i>`).join("")}</div>
+    <input type="range" id="m-range" min="40" max="208" value="${M.bpm}" aria-label="Tempo en battements par minute">
+    <div class="row-btns"><button class="btn" data-act="m-step" data-id="-4">− 4</button><button class="btn" data-act="m-step" data-id="-1">− 1</button>
+      <button class="btn ${M.on?"primary":"accent"}" data-act="m-toggle" style="min-width:120px">${M.on?"Arrêter":"Lancer"}</button>
+      <button class="btn" data-act="m-step" data-id="1">+ 1</button><button class="btn" data-act="m-step" data-id="4">+ 4</button></div>
+    <div class="row-btns"><div class="seg" role="group" aria-label="Temps par mesure">${B.map(b=>`<button data-act="m-beats" data-id="${b}" aria-pressed="${M.beats===b}">${b} temps</button>`).join("")}</div>
+      <button class="btn" data-act="m-tap">Taper le tempo</button></div>
+  </div>`;
+}
+
+function banner(){
+  if(SYNC.state==="auth")return `<p class="banner">La clé GitHub est refusée ou expirée : la synchronisation est arrêtée. Créez-en une nouvelle dans <a href="#reglages">Réglages</a>.</p>`;
+  if(SYNC.state==="missing")return `<p class="banner">Le fichier de données n'existe plus sur GitHub. Reconnectez cet appareil dans <a href="#reglages">Réglages</a>.</p>`;
+  return "";
+}
+function viewSettings(){
+  const on=!!SYNC.cfg,bad=["auth","missing","error"].includes(SYNC.state);
+  const standalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  return `<div class="head"><div><p class="eyebrow">Mac, iPhone, iPad</p><h1 class="title">Réglages</h1></div></div>
+  <section style="margin-top:0"><div class="sec-h"><h2>Synchronisation</h2></div>
+    <div class="card" style="display:grid;gap:14px">
+      <div class="state ${on&&!bad?"ok":bad?"bad":""}"><i></i><span>${esc(syncLabel())}</span></div>
+      ${on?`<p class="small muted" style="margin:0">Le carnet est recopié dans un fichier privé de votre compte GitHub, à chaque modification et à chaque ouverture. Pour ajouter un appareil, collez-y la même clé.</p>
+        <div class="row-btns"><button class="btn primary" data-act="sync-now">Synchroniser maintenant</button><button class="btn quiet" data-act="sync-off">Déconnecter cet appareil</button></div>`
+      :`<ol class="steps small">
+        <li>Sur GitHub, <a href="https://github.com/settings/tokens/new?scopes=gist&description=Carnet%20de%20piano" target="_blank" rel="noopener">créez une clé d'accès limitée aux « gists »</a>. Choisissez « No expiration » pour ne pas avoir à la refaire, puis « Generate token ».</li>
+        <li>Copiez la clé (elle commence par <span class="num">ghp_</span>) et collez-la ici.</li>
+        <li>Refaites l'étape 2 sur chaque appareil avec la même clé. Entre Mac et iPhone, le copier-coller passe d'un appareil à l'autre.</li></ol>
+        <div class="inline"><label class="f">Clé GitHub<input type="text" id="g-token" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…"></label></div>
+        <div><button class="btn primary" data-act="sync-connect">Connecter cet appareil</button></div>
+        <p class="small muted" style="margin:0">La clé reste sur cet appareil et ne donne accès qu'à vos gists, pas à vos dépôts.</p>`}
+    </div></section>
+  <section><div class="sec-h"><h2>Installer l'application</h2></div>
+    <div class="card small">${standalone?`<p style="margin:0">L'application est installée sur cet appareil.</p>`:`<ol class="steps">
+      <li><b>iPhone, iPad</b> : dans Safari, bouton Partager, puis « Sur l'écran d'accueil ».</li>
+      <li><b>Mac</b> : dans Safari, menu Fichier, puis « Ajouter au Dock ». Dans Chrome, l'icône d'installation à droite de la barre d'adresse.</li></ol>`}</div></section>
+  <section><div class="sec-h"><h2>Sauvegarde</h2><span>${Object.keys(S.pieces).length} morceaux · ${Object.keys(S.sessions).length} séance${Object.keys(S.sessions).length>1?"s":""}</span></div>
+    <div class="card"><div class="row-btns"><button class="btn" data-act="export">Télécharger une sauvegarde</button><button class="btn" data-act="import">Restaurer une sauvegarde</button></div>
+      <input type="file" id="g-file" accept="application/json,.json" hidden></div></section>`;
+}
+
+/* ---------- rendu ---------- */
+let dirty=false,raf=0;
+const route=()=>{const h=location.hash.slice(1);return ["aujourdhui","repertoire","journal","metronome","reglages"].includes(h)?h:"aujourdhui"};
+function scheduleRender(force){
+  const a=document.activeElement;
+  if(!force&&a&&$("#view").contains(a)&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){dirty=true;return}
+  cancelAnimationFrame(raf);raf=requestAnimationFrame(render);
+}
+function render(){
+  dirty=false;
+  const r=route();
+  document.querySelectorAll(".nav a").forEach(a=>a.dataset.v===r?a.setAttribute("aria-current","page"):a.removeAttribute("aria-current"));
+  $("#sync").textContent=syncLabel();
+  $("#view").innerHTML=r==="repertoire"?viewRep():r==="journal"?viewJournal():r==="metronome"?viewMetro():r==="reglages"?viewSettings():viewToday();
+}
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2600)}
+
+/* ---------- chronomètre ---------- */
+const elapsed=()=>D.acc+(D.running?Date.now()-D.start:0);
+function clockText(){const s=Math.floor(elapsed()/1000),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function saveTimer(){try{localStorage.setItem(LS+"-timer",JSON.stringify({running:D.running,start:D.start,acc:D.acc,sel:[...D.sel]}))}catch(e){}}
+function loadTimer(){try{const o=JSON.parse(localStorage.getItem(LS+"-timer")||"null");if(o){D.running=!!o.running;D.start=o.start||0;D.acc=o.acc||0;D.sel=new Set(o.sel||[])}}catch(e){}}
+setInterval(()=>{const c=$("#clock");if(c&&D.running)c.textContent=clockText()},500);
+
+function saveSession(){
+  const manual=numOrNull(D.minutes),mins=manual||Math.round(elapsed()/60000);
+  if(!mins){toast("Lancez le chronomètre ou saisissez une durée.");return}
+  const t=today(),ids=[...D.sel].filter(id=>S.pieces[id]);
+  Store.put("sessions",uid(),{date:t,ts:Date.now(),minutes:mins,pieces:ids,note:D.note.trim()});
+  for(const id of ids){const p=Object.assign({},S.pieces[id]);p.lastPlayed=t;if(!p.stage){p.stage=1;p.started=p.started||t}Store.put("pieces",id,p)}
+  D.running=false;D.acc=0;D.start=0;D.minutes="";D.note="";D.sel=new Set();saveTimer();
+  toast("Séance de "+mins+" min enregistrée");
+}
+function advance(id){
+  const p=Object.assign({},S.pieces[id]);if(!p.id||p.stage>=5)return;
+  p.stage=(p.stage||0)+1;const t=today();p.started=p.started||t;if(p.stage===5)p.done=t;
+  Store.put("pieces",id,p);toast(p.title+" : "+STAGES[p.stage]);
+}
+
+/* ---------- fenêtres d'édition ---------- */
+function openDlg(html){const d=$("#dlg");d.innerHTML=html;if(!d.open)d.showModal()}
+function closeDlg(){const d=$("#dlg");if(d.open)d.close();DS=null}
+function stagesHtml(c){return `<div class="stages" role="group" aria-label="Étape">${STAGES.map((s,i)=>`<button type="button" data-act="d-stage" data-id="${i}" aria-pressed="${DS.stage===i}">${staff(i,c)}<span>${s}</span></button>`).join("")}</div>`}
+function spark(p){
+  const log=p.tempoLog||[];if(log.length<2)return "";
+  const v=log.map(x=>x.bpm),lo=Math.min(...v,p.goal||Infinity)-4,hi=Math.max(...v,p.goal||0)+4,W=300,H=60;
+  const x=i=>6+i*(W-12)/(log.length-1),y=b=>H-6-(b-lo)/(hi-lo)*(H-12);
+  return `<div><p class="small muted" style="margin:0 0 2px">Tempo au fil du temps : de ${v[0]} à ${v[v.length-1]}${p.goal?", objectif "+p.goal:""}</p>
+  <svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+  ${p.goal?`<line x1="0" x2="${W}" y1="${y(p.goal)}" y2="${y(p.goal)}" stroke="var(--soft)" stroke-dasharray="4 4" stroke-width="1"/>`:""}
+  <polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${log.map((l,i)=>x(i)+","+y(l.bpm)).join(" ")}"/>
+  <circle cx="${x(log.length-1)}" cy="${y(v[v.length-1])}" r="3.5" fill="var(--accent)"/></svg></div>`;
+}
+function dlgPiece(id,bookId){
+  const p=id?S.pieces[id]:{bookId,stage:0,n:(piecesOf(bookId).reduce((a,x)=>Math.max(a,x.n||0),0)+1)};
+  if(!p)return;
+  DS={kind:"piece",id,stage:p.stage||0,confirm:false,bookId:p.bookId};
+  const b=S.books[p.bookId];
+  openDlg(`<form id="f-piece"><h2>${id?"Morceau":"Nouveau morceau"}</h2>
+    <label class="f">Titre<input type="text" id="p-title" required value="${esc(p.title)}"></label>
+    <div class="inline"><label class="f">Référence (n°, BWV, page)<input type="text" id="p-ref" value="${esc(p.ref)}"></label>
+      <label class="f" style="flex:0 0 90px">Ordre<input type="number" id="p-n" value="${esc(p.n??"")}"></label></div>
+    <label class="f">Recueil<select id="p-book">${booksArr().map(x=>`<option value="${esc(x.id)}"${x.id===p.bookId?" selected":""}>${esc(x.title)}</option>`).join("")}</select></label>
+    <div id="d-stages">${stagesHtml(col(b))}</div>
+    <div class="inline"><label class="f">Tempo joué (♩ par minute)<input type="number" id="p-tempo" min="20" max="300" inputmode="numeric" value="${esc(p.tempo??"")}"></label>
+      <label class="f">Tempo visé<input type="number" id="p-goal" min="20" max="300" inputmode="numeric" value="${esc(p.goal??"")}"></label></div>
+    ${id?spark(p):""}
+    <label class="f">Notes de travail (doigtés, mesures difficiles, consignes du professeur)<textarea id="p-notes">${esc(p.notes)}</textarea></label>
+    ${id?`<p class="small muted" style="margin:0">${[p.started?"Commencé le "+parse(p.started).toLocaleDateString("fr-FR"):"",p.done?"acquis le "+parse(p.done).toLocaleDateString("fr-FR"):"",p.lastPlayed?"joué pour la dernière fois le "+parse(p.lastPlayed).toLocaleDateString("fr-FR"):""].filter(Boolean).join(" · ")}</p>`:""}
+    <div class="dlg-foot"><span class="row-btns">${id?`<button type="button" class="btn danger" data-act="d-delete">Supprimer</button><button type="button" class="btn" data-act="d-metro">Métronome à ce tempo</button>`:""}</span>
+      <span class="row-btns"><button type="button" class="btn quiet" data-act="d-close">Annuler</button><button class="btn primary">Enregistrer</button></span></div></form>`);
+}
+function savePiece(){
+  const old=DS.id?S.pieces[DS.id]:{},t=today();
+  const p={bookId:$("#p-book").value,n:numOrNull($("#p-n").value),title:$("#p-title").value.trim(),ref:$("#p-ref").value.trim(),stage:DS.stage,
+    tempo:numOrNull($("#p-tempo").value),goal:numOrNull($("#p-goal").value),notes:$("#p-notes").value.trim(),
+    started:old.started||null,done:old.done||null,lastPlayed:old.lastPlayed||null,tempoLog:old.tempoLog||[]};
+  if(!p.title)return;
+  if(p.tempo&&p.tempo!==old.tempo)p.tempoLog=[...p.tempoLog,{d:t,bpm:p.tempo}].slice(-40);
+  if(p.stage>0&&!p.started)p.started=t;
+  p.done=p.stage===5?(p.done||t):null;
+  Store.put("pieces",DS.id||uid(),p);closeDlg();toast("Morceau enregistré");
+}
+function dlgBook(id){
+  const b=id?S.books[id]:{color:COLORS[Object.keys(S.books).length%COLORS.length]};
+  if(!b)return;
+  DS={kind:"book",id,color:b.color,confirm:false};
+  openDlg(`<form id="f-book"><h2>${id?"Recueil":"Nouveau recueil"}</h2>
+    <label class="f">Titre<input type="text" id="b-title" required value="${esc(b.title)}"></label>
+    <label class="f">Auteur ou compositeur<input type="text" id="b-author" value="${esc(b.author)}"></label>
+    <div class="inline"><label class="f">Nombre de pages<input type="number" id="b-pages" min="1" inputmode="numeric" value="${esc(b.pages??"")}"></label>
+      <label class="f">Page atteinte<input type="number" id="b-page" min="0" inputmode="numeric" value="${esc(b.page??"")}"></label></div>
+    <div><p class="small muted" style="margin:0 0 6px">Couleur</p><div class="swatches" id="d-sw">${swatches()}</div></div>
+    <div class="dlg-foot"><span>${id?`<button type="button" class="btn danger" data-act="d-delete">Supprimer le recueil</button>`:""}</span>
+      <span class="row-btns"><button type="button" class="btn quiet" data-act="d-close">Annuler</button><button class="btn primary">Enregistrer</button></span></div></form>`);
+}
+const swatches=()=>COLORS.map(c=>`<button type="button" data-act="d-color" data-id="${c}" style="--c:var(--b-${c})" aria-pressed="${DS.color===c}" aria-label="${c}"></button>`).join("");
+function saveBook(){
+  const old=DS.id?S.books[DS.id]:{};
+  const b={title:$("#b-title").value.trim(),author:$("#b-author").value.trim(),pages:numOrNull($("#b-pages").value),page:numOrNull($("#b-page").value)||0,color:DS.color,order:old.order??Object.keys(S.books).length+1};
+  if(!b.title)return;
+  Store.put("books",DS.id||uid(),b);closeDlg();toast("Recueil enregistré");
+}
+function dlgSession(id){
+  const s=id?S.sessions[id]:{date:today(),minutes:"",pieces:[]};
+  if(!s)return;
+  DS={kind:"session",id,confirm:false,pieces:s.pieces||[]};
+  const names=DS.pieces.map(i=>S.pieces[i]?.title).filter(Boolean).join(", ");
+  openDlg(`<form id="f-session"><h2>${id?"Séance":"Séance passée"}</h2>
+    <div class="inline"><label class="f">Date<input type="date" id="x-date" required max="${today()}" value="${esc(s.date)}"></label>
+      <label class="f">Durée (min)<input type="number" id="x-min" required min="1" max="600" inputmode="numeric" value="${esc(s.minutes)}"></label></div>
+    ${names?`<p class="small muted" style="margin:0">Morceaux : ${esc(names)}</p>`:""}
+    <label class="f">Note<textarea id="x-note">${esc(s.note)}</textarea></label>
+    <div class="dlg-foot"><span>${id?`<button type="button" class="btn danger" data-act="d-delete">Supprimer</button>`:""}</span>
+      <span class="row-btns"><button type="button" class="btn quiet" data-act="d-close">Annuler</button><button class="btn primary">Enregistrer</button></span></div></form>`);
+}
+function saveSess(){
+  const old=DS.id?S.sessions[DS.id]:{},m=numOrNull($("#x-min").value),d=$("#x-date").value;
+  if(!m||!d)return;
+  Store.put("sessions",DS.id||uid(),{date:d,ts:old.ts||Date.now(),minutes:m,pieces:DS.pieces,note:$("#x-note").value.trim()});
+  closeDlg();toast("Séance enregistrée");
+}
+function dlgDelete(btn){
+  if(!DS.confirm){DS.confirm=true;btn.textContent=DS.kind==="book"?"Confirmer : supprimer le recueil et ses morceaux":"Confirmer la suppression";return}
+  if(DS.kind==="book"){for(const p of piecesOf(DS.id))Store.del("pieces",p.id);Store.del("books",DS.id)}
+  else Store.del(DS.kind==="piece"?"pieces":"sessions",DS.id);
+  closeDlg();toast("Supprimé");
+}
+
+/* ---------- métronome ---------- */
+function mClick(t,first){
+  const o=M.ctx.createOscillator(),g=M.ctx.createGain();
+  o.frequency.value=first?1560:1040;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.5,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.06);
+  o.connect(g).connect(M.ctx.destination);o.start(t);o.stop(t+.07);
+}
+function mTick(){
+  while(M.next<M.ctx.currentTime+.12){
+    const b=M.beat%M.beats;mClick(M.next,b===0);
+    setTimeout(()=>{const els=document.querySelectorAll("#m-beats i");els.forEach((e,i)=>e.classList.toggle("hit",i===b))},Math.max(0,(M.next-M.ctx.currentTime)*1000));
+    M.next+=60/M.bpm;M.beat++;
+  }
+}
+function mToggle(on){
+  if(on===M.on)return;
+  if(on){
+    try{M.ctx=M.ctx||new (window.AudioContext||window.webkitAudioContext)();M.ctx.resume()}catch(e){toast("Le son n'est pas disponible dans cette fenêtre.");return}
+    M.on=true;M.beat=0;M.next=M.ctx.currentTime+.08;M.timer=setInterval(mTick,25);
+  }else{M.on=false;clearInterval(M.timer)}
+  scheduleRender(true);
+}
+function mSet(b){M.bpm=Math.max(40,Math.min(208,Math.round(b)));const e=$("#m-bpm");if(e){e.textContent=M.bpm;$("#m-name").textContent=tempoName(M.bpm);$("#m-range").value=M.bpm}}
+function mTap(){const n=performance.now();M.taps=M.taps.filter(t=>n-t<2500);M.taps.push(n);if(M.taps.length>1)mSet(60000*(M.taps.length-1)/(n-M.taps[0]))}
+
+/* ---------- événements ---------- */
+document.addEventListener("click",e=>{
+  const d=$("#dlg");
+  if(e.target===d){closeDlg();return}
+  const el=e.target.closest("[data-act]");if(!el)return;
+  const a=el.dataset.act,id=el.dataset.id;
+  switch(a){
+    case "timer":if(D.running){D.acc=elapsed();D.running=false}else{D.start=Date.now();D.running=true}saveTimer();scheduleRender(true);break;
+    case "timer-reset":D.running=false;D.acc=0;saveTimer();scheduleRender(true);break;
+    case "sel":D.sel.has(id)?D.sel.delete(id):D.sel.add(id);saveTimer();scheduleRender(true);break;
+    case "save-session":saveSession();break;
+    case "advance":advance(id);break;
+    case "piece":dlgPiece(id);break;
+    case "piece-new":dlgPiece("",id);break;
+    case "book":dlgBook(id);break;
+    case "session":dlgSession(id);break;
+    case "filter":S.filter=id;scheduleRender(true);break;
+    case "d-close":closeDlg();break;
+    case "d-stage":DS.stage=+id;$("#d-stages").innerHTML=stagesHtml(col(S.books[$("#p-book").value]));break;
+    case "d-color":DS.color=id;$("#d-sw").innerHTML=swatches();break;
+    case "d-delete":dlgDelete(el);break;
+    case "d-metro":{const t=numOrNull($("#p-tempo").value)||numOrNull($("#p-goal").value);if(t)M.bpm=Math.max(40,Math.min(208,t));closeDlg();location.hash="metronome";scheduleRender(true);break}
+    case "m-toggle":mToggle(!M.on);break;
+    case "m-step":mSet(M.bpm+ +id);break;
+    case "m-beats":M.beats=+id;M.beat=0;scheduleRender(true);break;
+    case "m-tap":mTap();break;
+    case "sync-connect":{const t=$("#g-token").value.trim();if(t)connect(t);else toast("Collez d'abord la clé GitHub.");break}
+    case "sync-now":sync();break;
+    case "sync-off":disconnect();break;
+    case "export":exportData();break;
+    case "import":$("#g-file").click();break;
+  }
+});
+document.addEventListener("submit",e=>{e.preventDefault();const f=e.target.id;if(f==="f-piece")savePiece();else if(f==="f-book")saveBook();else if(f==="f-session")saveSess()});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="s-min")D.minutes=t.value;else if(t.id==="s-note")D.note=t.value;else if(t.id==="m-range")mSet(+t.value);
+});
+document.addEventListener("change",e=>{if(e.target.id==="g-file"&&e.target.files[0])importData(e.target.files[0]);if(e.target.id==="s-add"&&e.target.value){D.sel.add(e.target.value);saveTimer();scheduleRender(true)}});
+document.addEventListener("focusout",()=>{if(dirty)setTimeout(()=>scheduleRender(),0)});
+$("#dlg").addEventListener("close",()=>{DS=null});
+window.addEventListener("hashchange",()=>scheduleRender(true));
+
+loadTimer();
+Store.init();
+render();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync()});
+window.addEventListener("online",()=>sync());
+setInterval(()=>{if(!document.hidden)sync()},60000);
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
