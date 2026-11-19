@@ -50,6 +50,11 @@ jobs:
           shot 08-paywall fr -uiOpen paywall
           shot 09-timer fr -uiOpen timer
           shot 10-today-en en
+          shot 11-history fr -uiTab tracking -uiMode history
+          shot 12-settings fr -uiSettings YES
+          xcrun simctl ui "$UDID" appearance dark
+          shot 13-detail-dark fr -uiTab library -uiOpenFirst YES
+          shot 14-catalog-dark en -uiTab catalog -uiQuery "chopin nocturne"
           xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "PianoJournal" AND messageType == fault' --style compact 2>/dev/null | tail -n 30 > "$OUT/faults.txt" || true
       - name: Publier le journal
         if: always()

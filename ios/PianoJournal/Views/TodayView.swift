@@ -9,9 +9,17 @@ struct TodayView: View {
     @AppStorage("dailyGoalMinutes") private var dailyGoal = 15
 
     @State private var showPicker = false
-    @State private var showSettings = false
+    @State private var showSettings = TodayView.debugFlag("uiSettings")
     @State private var pendingStart = false
     @State private var pendingScore: Score?
+
+    private static func debugFlag(_ key: String) -> Bool {
+        #if DEBUG
+        return UserDefaults.standard.bool(forKey: key)
+        #else
+        return false
+        #endif
+    }
 
     private var stats: PracticeStats { PracticeStats(sessions: sessions) }
 

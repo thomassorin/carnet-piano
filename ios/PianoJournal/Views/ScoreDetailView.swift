@@ -60,8 +60,9 @@ struct ScoreDetailView: View {
         .sheet(isPresented: $showEdit) { EditScoreSheet(score: score) }
         .confirmationDialog("Supprimer cette partition et tout son historique ?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive) {
-                context.delete(score)
+                let target = score
                 dismiss()
+                context.delete(target)
             }
         }
         .alert("Recherche IA", isPresented: Binding(get: { aiMessage != nil }, set: { if !$0 { aiMessage = nil } })) {
@@ -166,7 +167,10 @@ struct ScoreDetailView: View {
                                 .foregroundStyle(child.isDone ? .secondary : .primary)
                             HStack(spacing: 8) {
                                 if child.ownSeconds > 0 {
-                                    Label(Fmt.duration(child.ownSeconds), systemImage: "clock")
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "clock")
+                                        Text(Fmt.duration(child.ownSeconds)).monospacedDigit()
+                                    }
                                 }
                                 StarsLabel(rating: child.rating)
                                 if !child.notes.isEmpty { Image(systemName: "note.text") }

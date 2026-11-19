@@ -9,8 +9,15 @@ struct TrackingView: View {
     @Query(sort: \PracticeSession.startedAt, order: .reverse) private var sessions: [PracticeSession]
     @Query private var scores: [Score]
 
-    @State private var mode: Mode = .stats
+    @State private var mode: Mode = TrackingView.initialMode
     @State private var showAddSession = false
+
+    private static var initialMode: Mode {
+        #if DEBUG
+        if UserDefaults.standard.string(forKey: "uiMode") == "history" { return .history }
+        #endif
+        return .stats
+    }
 
     var body: some View {
         NavigationStack {

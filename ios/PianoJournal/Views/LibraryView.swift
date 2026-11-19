@@ -45,24 +45,30 @@ struct LibraryView: View {
                     }
                 } else {
                     List {
-                        Picker("Filtre", selection: $status) {
-                            Text("Toutes").tag(StatusFilter.all)
-                            Text("En cours").tag(StatusFilter.inProgress)
-                            Text("Terminées").tag(StatusFilter.done)
+                        Section {
+                            Picker("Filtre", selection: $status) {
+                                Text("Toutes").tag(StatusFilter.all)
+                                Text("En cours").tag(StatusFilter.inProgress)
+                                Text("Terminées").tag(StatusFilter.done)
+                            }
+                            .pickerStyle(.segmented)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                         }
-                        .pickerStyle(.segmented)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listSectionSpacing(.compact)
 
-                        ForEach(visible) { score in
-                            NavigationLink(value: score) { ScoreRow(score: score) }
-                        }
-                        .onDelete { offsets in
-                            for index in offsets { context.delete(visible[index]) }
-                        }
+                        Section {
+                            ForEach(visible) { score in
+                                NavigationLink(value: score) { ScoreRow(score: score) }
+                            }
+                            .onDelete { offsets in
+                                let shown = visible
+                                for index in offsets { context.delete(shown[index]) }
+                            }
 
-                        if visible.isEmpty {
-                            Text("Aucune partition ne correspond.").foregroundStyle(.secondary)
+                            if visible.isEmpty {
+                                Text("Aucune partition ne correspond.").foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .searchable(text: $query, prompt: "Rechercher dans mes partitions")

@@ -226,8 +226,12 @@ struct CatalogView: View {
                         Text(item.title).font(.subheadline.weight(.medium)).lineLimit(2)
                         Text(item.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         if let first = matches.first {
-                            Label(matches.count > 1 ? "\(first) +\(matches.count - 1)" : first, systemImage: "arrow.turn.down.right")
-                                .font(.caption2).foregroundStyle(Color.accentColor).lineLimit(1)
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.turn.down.right")
+                                Text(matches.count > 1 ? "\(first) +\(matches.count - 1)" : first).lineLimit(1)
+                            }
+                            .font(.caption2)
+                            .foregroundStyle(Color.accentColor)
                         }
                     }
                 }
