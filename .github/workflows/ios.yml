@@ -9,25 +9,55 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Build (simulateur iOS)
+      - name: Compilation (simulateur iOS)
         run: |
+          mkdir -p "$RUNNER_TEMP/out"
           cd ios
           echo "commit $GITHUB_SHA" > "$RUNNER_TEMP/build.log"
           xcodebuild -version >> "$RUNNER_TEMP/build.log"
           xcodebuild -project PianoJournal.xcodeproj -scheme PianoJournal \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -configuration Debug CODE_SIGNING_ALLOWED=NO build >> "$RUNNER_TEMP/build.log" 2>&1 \
+            -configuration Debug -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build >> "$RUNNER_TEMP/build.log" 2>&1 \
             && echo "RESULT OK" >> "$RUNNER_TEMP/build.log" || echo "RESULT FAILED" >> "$RUNNER_TEMP/build.log"
-      - name: Publier le journal de compilation
+      - name: Captures d'écran dans le simulateur
+        continue-on-error: true
+        run: |
+          grep -q "RESULT OK" "$RUNNER_TEMP/build.log" || exit 0
+          OUT="$RUNNER_TEMP/out"; BID=com.thomassorin.pianojournal
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/PianoJournal.app"
+          UDID=$(xcrun simctl list devices available | grep -E "iPhone 16 \(" | head -1 | grep -oE '[0-9A-F]{8}-[0-9A-F-]{27}')
+          echo "simulateur $UDID" > "$OUT/shots.txt"
+          xcrun simctl boot "$UDID"; xcrun simctl bootstatus "$UDID" -b >/dev/null
+          xcrun simctl install "$UDID" "$APP"
+          shot() {
+            name=$1; lang=$2; shift 2
+            xcrun simctl terminate "$UDID" $BID >/dev/null 2>&1 || true
+            xcrun simctl launch "$UDID" $BID -AppleLanguages "($lang)" -AppleLocale "${lang}_FR" "$@" >> "$OUT/shots.txt" 2>&1
+            sleep "${WAIT:-7}"
+            xcrun simctl io "$UDID" screenshot "$OUT/$name.png" >/dev/null 2>&1
+            sips -s format jpeg -s formatOptions 70 -Z 1300 "$OUT/$name.png" --out "$OUT/$name.jpg" >/dev/null 2>&1 && rm "$OUT/$name.png"
+          }
+          WAIT=14 shot 01-today fr -seedDemo YES
+          shot 02-library fr -uiTab library
+          shot 03-detail fr -uiTab library -uiOpenFirst YES
+          shot 04-catalog fr -uiTab catalog
+          WAIT=12 shot 05-search fr -uiTab catalog -uiQuery "arabesque"
+          WAIT=12 shot 06-search-online fr -uiTab catalog -uiQuery "einaudi"
+          shot 07-tracking fr -uiTab tracking
+          shot 08-paywall fr -uiOpen paywall
+          shot 09-timer fr -uiOpen timer
+          shot 10-today-en en
+          xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "PianoJournal" AND messageType == fault' --style compact 2>/dev/null | tail -n 30 > "$OUT/faults.txt" || true
+      - name: Publier le journal
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
-          { head -n 3 ../build.log; grep -E "error:|RESULT|BUILD (SUCCEEDED|FAILED)" ../build.log | cut -c1-600 | sort -u | head -n 200; } > summary.txt
+          cd "$RUNNER_TEMP/out"
+          { head -n 3 ../build.log; grep -E "error:|RESULT|BUILD (SUCCEEDED|FAILED)" ../build.log | cut -c1-600 | sort -u | head -n 200; ls; } > summary.txt
           grep -E "warning:" ../build.log | cut -c1-500 | sort -u | head -n 200 > warnings.txt || true
           git init -q -b ci-logs .
           git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "log $GITHUB_SHA"

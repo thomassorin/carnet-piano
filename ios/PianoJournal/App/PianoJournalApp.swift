@@ -28,6 +28,7 @@ struct RootView: View {
     @Environment(Metronome.self) private var metronome
     @Environment(CatalogStore.self) private var catalog
     @Environment(SubscriptionManager.self) private var store
+    @Environment(\.modelContext) private var context
 
     var body: some View {
         @Bindable var router = router
@@ -55,5 +56,8 @@ struct RootView: View {
             PaywallView()
                 .environment(store)
         }
+        #if DEBUG
+        .task { DebugLaunch.apply(router: router, timer: timer, catalog: catalog, context: context) }
+        #endif
     }
 }

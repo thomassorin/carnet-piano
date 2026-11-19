@@ -8,7 +8,7 @@ struct CatalogView: View {
     @Environment(SubscriptionManager.self) private var store
     @Query private var scores: [Score]
 
-    @State private var query = ""
+    @State private var query = CatalogView.initialQuery
     @State private var filter = CatalogFilter()
     @State private var classical: [CatalogItem] = []
     @State private var songs: [CatalogItem] = []
@@ -19,6 +19,14 @@ struct CatalogView: View {
     @State private var onlineLoading = false
     @State private var showCustom = false
     @State private var addingID: String?
+
+    private static var initialQuery: String {
+        #if DEBUG
+        return UserDefaults.standard.string(forKey: "uiQuery") ?? ""
+        #else
+        return ""
+        #endif
+    }
 
     private var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var isBrowsing: Bool { trimmedQuery.isEmpty && filter.isEmpty }

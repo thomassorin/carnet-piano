@@ -12,6 +12,7 @@ struct LibraryView: View {
     @State private var status: StatusFilter = .all
     @State private var query = ""
     @State private var showCustom = false
+    @State private var path = NavigationPath()
 
     private var topLevel: [Score] { scores.filter { $0.parent == nil } }
 
@@ -30,7 +31,7 @@ struct LibraryView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if topLevel.isEmpty {
                     ContentUnavailableView {
@@ -82,6 +83,14 @@ struct LibraryView: View {
             }
             .sheet(isPresented: $showCustom) { AddCustomScoreView() }
             .miniTimerBar()
+            #if DEBUG
+            .task {
+                try? await Task.sleep(for: .milliseconds(600))
+                if UserDefaults.standard.bool(forKey: "uiOpenFirst"), let first = topLevel.last(where: { !$0.children.isEmpty }) {
+                    path.append(first)
+                }
+            }
+            #endif
         }
     }
 
