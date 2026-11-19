@@ -1,0 +1,22 @@
+commit 9add344c47b8b7fe27c3ce6a03e626a2aaf55337
+Xcode 16.4
+Build version 16F6
+** BUILD SUCCEEDED **
+RESULT OK
+01-today.jpg
+02-library.jpg
+03-detail.jpg
+04-catalog.jpg
+05-search.jpg
+06-search-online.jpg
+07-tracking.jpg
+08-paywall.jpg
+09-timer.jpg
+10-today-en.jpg
+11-history.jpg
+12-settings.jpg
+13-detail-dark.jpg
+14-catalog-dark.jpg
+faults.txt
+shots.txt
+summary.txt
