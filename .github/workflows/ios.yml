@@ -1,0 +1,36 @@
+name: iOS build
+on:
+  push:
+    branches: [ios-app]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (simulateur iOS)
+        run: |
+          cd ios
+          echo "commit $GITHUB_SHA" > "$RUNNER_TEMP/build.log"
+          xcodebuild -version >> "$RUNNER_TEMP/build.log"
+          xcodebuild -project PianoJournal.xcodeproj -scheme PianoJournal \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug CODE_SIGNING_ALLOWED=NO build >> "$RUNNER_TEMP/build.log" 2>&1 \
+            && echo "RESULT OK" >> "$RUNNER_TEMP/build.log" || echo "RESULT FAILED" >> "$RUNNER_TEMP/build.log"
+      - name: Publier le journal de compilation
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/out" && cd "$RUNNER_TEMP/out"
+          { head -n 4 ../build.log; grep -E "error|RESULT|BUILD (SUCCEEDED|FAILED)" ../build.log | sort -u | head -n 300; echo "---- tail ----"; tail -n 40 ../build.log; } > summary.txt
+          grep -E "warning:" ../build.log | sort -u | head -n 200 > warnings.txt || true
+          git init -q -b ci-logs .
+          git add . && git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "log $GITHUB_SHA"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-logs
+      - name: Statut
+        run: grep -q "RESULT OK" "$RUNNER_TEMP/build.log"
