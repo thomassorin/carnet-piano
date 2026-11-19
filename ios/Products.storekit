@@ -37,12 +37,12 @@
           },
           "localizations" : [
             {
-              "description" : "Partitions illimitées et recherche IA",
+              "description" : "Partitions et recueils illimités",
               "displayName" : "Piano Journal Pro",
               "locale" : "fr"
             },
             {
-              "description" : "Unlimited scores and AI search",
+              "description" : "Unlimited scores and collections",
               "displayName" : "Piano Journal Pro",
               "locale" : "en_US"
             }
